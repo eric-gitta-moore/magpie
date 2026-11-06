@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="route-monitor-key" content="__ROUTE_MONITOR_CAPABILITY__">
+  <title>路由监控</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main>
+    <!-- 页面标题、网关连接状态与手动刷新。 -->
+    <header class="heading">
+      <div><h1>路由监控</h1><p>全局在途请求与路由开始速率</p></div>
+      <div class="heading-actions">
+        <span id="connection" class="connection" role="status">正在连接</span>
+        <button id="refresh" type="button">刷新</button>
+      </div>
+    </header>
+    <p id="gateway" class="gateway">正在读取本机 Magpie 网关…</p>
+    <!-- 全网关在途、排队与明确标注统计口径的路由 QPS。 -->
+    <section class="metrics" aria-label="网关实时指标">
+      <article class="metric"><h2>在途请求</h2><strong id="requests">—</strong><p>当前全网关请求，包含排队</p></article>
+      <article class="metric"><h2>排队</h2><strong id="waiting">—</strong><p>正在等待并发槽的请求</p></article>
+      <article class="metric"><h2>路由 QPS</h2><strong id="qps">—</strong><p>按请求开始时间统计最近 60 秒的路由记录</p></article>
+    </section>
+    <p id="rate-notice" class="notice" role="status">正在建立路由统计窗口…</p>
+    <!-- 可视化只负责显示路由记录，全局请求数始终取网关接口。 -->
+    <section class="card graph-card" aria-labelledby="graph-title">
+      <div class="section-heading"><h2 id="graph-title">实时路由</h2><span id="graph-summary">等待路由事件</span></div>
+      <div id="graph" class="graph" aria-label="Agent 经过 Magpie 路由到供应商"></div>
+      <p id="graph-note" class="graph-note">还没有路由记录</p>
+    </section>
+    <!-- 保留最近请求的原始模型、供应商、阶段和耗时。 -->
+    <section class="card recent-card" aria-labelledby="recent-title">
+      <div class="section-heading"><h2 id="recent-title">最近请求</h2><span>最多显示 12 条路由记录</span></div>
+      <ol id="routes" class="routes"><li class="empty">等待第一条路由记录</li></ol>
+    </section>
+    <footer><span id="updated">尚未收到数据</span><span>只读监控 · 不发送模型请求</span></footer>
+  </main>
+</body>
+</html>

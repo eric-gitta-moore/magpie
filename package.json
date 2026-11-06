@@ -1,0 +1,46 @@
+{
+  "name": "magpie-route-monitor",
+  "version": "0.1.0",
+  "description": "A routing monitor inside Magpie's sidebar, with global in-flight requests, queues and observed route QPS.",
+  "type": "module",
+  "main": "index.mjs",
+  "license": "MIT",
+  "files": [
+    "index.mjs",
+    "lib",
+    "page",
+    "web",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22",
+    "magpie": ">=0.1.3175"
+  },
+  "magpie": {
+    "page": {
+      "title": "Route monitor",
+      "titles": {
+        "zh": "路由监控",
+        "zh-TW": "路由監控"
+      },
+      "file": "page/index.html",
+      "icon": "page/icon.svg",
+      "keepAlive": true,
+      "service": {
+        "port": 3491,
+        "option": "port"
+      }
+    },
+    "options": {
+      "port": 3491
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "node --test tests/ui.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

@@ -2,6 +2,12 @@
 // kernel adds them to i18n.js's (magpie.strings).
 magpie.strings({
   zh: {
+    "In flight {n}": "并发 {n}",
+    "Queued {n}": "排队 {n}",
+    "QPS {n}": "QPS {n}",
+    "Requests currently in flight, including queued requests. Queued is the subset waiting for a concurrency slot.": "当前在途请求数，包含排队请求；排队数仅表示正在等待并发槽位的请求。",
+    "Average requests started per second over the last {n} seconds; retries count once.": "最近 {n} 秒内开始的请求数折算为每秒平均值；一次请求的重试只计一次。",
+    "Current gateway metrics are unavailable.": "当前网关指标暂不可用。",
     "sign-in refused (answered since)": "登录曾被拒（之后已应答）",
     "Free first uses it before paid ones, and Cheapest first counts it as costing nothing": "免费优先会先用它再用付费的，最便宜优先把它算作不花钱",
     "{name}, {n} accounts: {windows}": "{name}（{n} 个账号）：{windows}",
@@ -669,6 +675,12 @@ magpie.strings({
     "This group may spend every account of {provider}": "这个组可以消耗 {provider} 的每个账号",
   },
   "zh-TW": {
+    "In flight {n}": "並行 {n}",
+    "Queued {n}": "排隊 {n}",
+    "QPS {n}": "QPS {n}",
+    "Requests currently in flight, including queued requests. Queued is the subset waiting for a concurrency slot.": "目前進行中的請求數，包含排隊請求；排隊數僅表示正在等待並行名額的請求。",
+    "Average requests started per second over the last {n} seconds; retries count once.": "最近 {n} 秒內開始的請求數換算為每秒平均值；一次請求的重試只計一次。",
+    "Current gateway metrics are unavailable.": "目前無法取得閘道指標。",
     "sign-in refused (answered since)": "登入曾被拒（之後已應答）",
     "Free first uses it before paid ones, and Cheapest first counts it as costing nothing": "免費優先會先用它再用付費的，最便宜優先把它算作不花錢",
     "{name}, {n} accounts: {windows}": "{name}（{n} 個帳號）：{windows}",
@@ -1336,6 +1348,12 @@ magpie.strings({
     "This group may spend every account of {provider}": "這個組可以消耗 {provider} 的每個帳號",
   },
   ja: {
+    "In flight {n}": "処理中 {n}",
+    "Queued {n}": "待機中 {n}",
+    "QPS {n}": "QPS {n}",
+    "Requests currently in flight, including queued requests. Queued is the subset waiting for a concurrency slot.": "現在処理中のリクエスト数には待機中も含まれます。待機中は同時実行枠を待っているリクエスト数です。",
+    "Average requests started per second over the last {n} seconds; retries count once.": "直近 {n} 秒間に開始したリクエスト数の毎秒平均です。同じリクエストの再試行は1回として数えます。",
+    "Current gateway metrics are unavailable.": "現在ゲートウェイの指標を取得できません。",
     "sign-in refused (answered since)": "サインイン拒否（その後は応答あり）",
     "Free first uses it before paid ones, and Cheapest first counts it as costing nothing": "無料優先は有料より先にこれを使い、最安優先はこれを費用ゼロとして数えます",
     "{name}, {n} accounts: {windows}": "{name}（{n} アカウント）：{windows}",
@@ -2003,6 +2021,12 @@ magpie.strings({
     "This group may spend every account of {provider}": "このグループは {provider} のすべてのアカウントを使えます",
   },
   de: {
+    "In flight {n}": "Parallel {n}",
+    "Queued {n}": "Wartend {n}",
+    "QPS {n}": "QPS {n}",
+    "Requests currently in flight, including queued requests. Queued is the subset waiting for a concurrency slot.": "Aktuell laufende Anfragen einschließlich wartender Anfragen. Wartend zählt nur Anfragen, die auf einen Platz für gleichzeitige Ausführung warten.",
+    "Average requests started per second over the last {n} seconds; retries count once.": "Durchschnittlich gestartete Anfragen pro Sekunde in den letzten {n} Sekunden; Wiederholungen einer Anfrage zählen nur einmal.",
+    "Current gateway metrics are unavailable.": "Aktuelle Gateway-Messwerte sind nicht verfügbar.",
     "sign-in refused (answered since)": "Anmeldung abgelehnt (seitdem beantwortet)",
     "Free first uses it before paid ones, and Cheapest first counts it as costing nothing": "„Kostenlos zuerst“ nutzt es vor bezahlten, „Günstigste zuerst“ zählt es als kostenlos",
     "{name}, {n} accounts: {windows}": "{name}, {n} Konten: {windows}",

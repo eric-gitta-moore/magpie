@@ -5362,9 +5362,13 @@ function routingPage(part) {
         caught = true;
       }
       try {
-        const res = await fetch(`/api/gateway/trace?after=${seq}${loaded ? "&wait=1" : ""}`);
+        // Metrics expire even without route changes: refresh a visible
+        // panel every second and retain the longer wait in the main window.
+        const res = await fetch(`/api/gateway/trace?after=${seq}${loaded ? "&wait=1" : ""}${pShown() ? "&timeout=1000" : ""}`);
+        if (!res.ok) throw new Error("routing trace could not be read");
         const d = await res.json();
         heard = true;
+        panelMetrics = d.metrics || null;
         noteAccounts(d);
         noteLifted(d.lifted);
         skew = at(d.now) - Date.now();
@@ -5373,7 +5377,10 @@ function routingPage(part) {
         // are its own, so the page starts again from its whole trace
         const fromOther = loaded && (d.by?.pid || 0) !== (by?.pid || 0);
         by = d.by || null;
-        if (fromOther) { routes.clear(); seq = 0; loaded = false; hubText(); continue; }
+        if (fromOther) {
+          panelMetrics = null; renderPanelMetrics();
+          routes.clear(); seq = 0; loaded = false; hubText(); continue;
+        }
         hubText();
         traceTotals = d.totals || traceTotals;
         if (!mine) {
@@ -5387,6 +5394,13 @@ function routingPage(part) {
           renderPanel();
           liveDots();
           await new Promise((r) => setTimeout(r, 5000));
+          continue;
+        }
+        // A metrics-only timeout keeps the stage, rows and their animations
+        // intact. On return from a hidden tab, redraw its retained routes.
+        if (loaded && d.seq === seq && !caught && !d.routes.length) {
+          renderPanelMetrics();
+          liveDots();
           continue;
         }
         if (d.seq < seq) routes.clear(); // the gateway started over
@@ -5459,6 +5473,8 @@ function routingPage(part) {
           renderAll();
         }
       } catch {
+        panelMetrics = null;
+        renderPanelMetrics();
         await new Promise((r) => setTimeout(r, 3000));
       }
     }
@@ -8103,7 +8119,8 @@ function routingPage(part) {
   // page above plays: who sent each, the model asked for, the provider and
   // account it went to, the model that answered (marked when the reply
   // names another), how it ended and when; today's calls and tokens over
-  // them, from the Usage page's count, and between the two a small stage:
+  // them, from the Usage page's count, then the gateway's current load
+  // and a small stage:
   // the agents that asked lately, magpie, and where their requests went,
   // each new request a dot flying there and back. A click opens the
   // window's Routing page on that request; nothing here moves the panel's
@@ -8112,6 +8129,43 @@ function routingPage(part) {
   if (pBox) pBox.hidden = false;
   const P_ROWS = 6;
   let today = null, todayAt = 0;
+  /** Latest gateway sample; absent or unreadable metrics stay unknown. */
+  let panelMetrics = null;
+  /** Persistent metrics row, updated without rebuilding the route stage. */
+  const pMetrics = el("div", "pr-metrics");
+  /** The gateway's in-flight request count, including requests in its queue. */
+  const pFlight = el("span");
+  /** The subset of requests waiting for a concurrency slot. */
+  const pQueued = el("span");
+  /** The gateway's average request starts per second over its sample window. */
+  const pQPS = el("span");
+  pMetrics.append(pFlight, pQueued, pQPS);
+
+  /**
+   * Paint the gateway's sample rather than deriving load from retained rows.
+   * Older gateways and failed reads show an unknown value instead of idle.
+   */
+  function renderPanelMetrics() {
+    if (!pBox) return;
+    /** Values come together from the process that serves the gateway. */
+    const metrics = panelMetrics;
+    /** A partial or invalid sample cannot say that the gateway is idle. */
+    const known = mine && Number.isSafeInteger(metrics?.requests) && metrics.requests >= 0
+      && Number.isSafeInteger(metrics?.waiting) && metrics.waiting >= 0
+      && Number.isFinite(metrics?.qps) && metrics.qps >= 0
+      && Number.isSafeInteger(metrics?.windowSeconds) && metrics.windowSeconds > 0;
+    /** Keep each field on its current node as its count or language changes. */
+    for (const [node, label, value] of [
+      [pFlight, "In flight {n}", known ? metrics.requests.toLocaleString(intlLang()) : "—"],
+      [pQueued, "Queued {n}", known ? metrics.waiting.toLocaleString(intlLang()) : "—"],
+      [pQPS, "QPS {n}", known ? metrics.qps.toLocaleString(intlLang(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"],
+    ]) setText(node, t(label, { n: value }));
+    setAttr(pMetrics, "title", known
+      ? t("Requests currently in flight, including queued requests. Queued is the subset waiting for a concurrency slot.") + "\n"
+        + t("Average requests started per second over the last {n} seconds; retries count once.", { n: metrics.windowSeconds })
+      : t("Current gateway metrics are unavailable."));
+  }
+
   const pShown = () => pBox && document.body.dataset.ptab === "routing";
   let pStale = false; // a draw skipped while the panel was hidden
   if (pBox) document.addEventListener("visibilitychange", () => { if (pStale && !document.hidden) renderPanel(); });
@@ -8375,7 +8429,8 @@ function routingPage(part) {
     open.type = "button";
     open.onclick = (e) => { api("window/main?view=routing", {}); e.currentTarget.blur(); };
     head.append(el("span", anyLive() ? "rt-livedot on" : "rt-livedot"), sum, el("span", "grow"), open);
-    const out = [head];
+    renderPanelMetrics();
+    const out = [head, pMetrics];
     if (picks) out.push(picks);
     if (!offMsg && loaded && rs.length) out.push(pStage);
     if (offMsg) out.push(el("p", "pr-none", t(offMsg)));

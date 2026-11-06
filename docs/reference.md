@@ -1,3 +1,5 @@
+> Updated by OpenAI Codex (GPT-6).
+
 # magpie reference
 
 The full manual: every agent magpie wires, every provider option, the gateway, routing, plugins, the CLI, Docker, sync and the files magpie keeps. For the overview, see the [README](../README.md).
@@ -2703,6 +2705,13 @@ prompt, reply or key is in it. The read asks no vendor and isn't counted
 itself, so it can be polled every second. It answers as
 `/v1/magpie/quotas` does: this machine, another only with a gateway key,
 and never a held key.
+
+The same concurrency response includes `qps` and `windowSeconds: 60`.
+QPS is the number of agent requests that began in the current second and
+preceding 59 seconds divided by 60. Status GETs and retries of one request
+do not add to it. The tray panel's Routing tab shows this rate beside the
+current requests and slot-waiting count, beneath today's calls and tokens;
+a missing or failed reading is shown as an em dash.
 
 Each request as it is routed, live, for a display that shows them
 (#3387): `GET /v1/magpie/route-events/snapshot` answers `cursor`, `active`

@@ -1,3 +1,5 @@
+> Updated by OpenAI Codex (GPT-6).
+
 # Gateway routing and fallback
 
 The gateway is magpie's local LLM endpoint (`127.0.0.1:3425` by default). It
@@ -2478,3 +2480,33 @@ go test -tags nogui ./internal/provider -run 'TestGroup|TestCodexCreditsSwitch|T
 
 The gateway's `TestMain` gives the package a home of its own, so these tests
 never read real providers or accounts.
+
+### Request-load counting
+
+The gateway counts request arrivals once where `inflights.add` admits
+each agent request. GET status reads do not enter that path, and retries
+within the same request do not add arrivals. A fixed ring of sixty
+one-second buckets retains the current second and the preceding 59
+seconds; their total divided by 60 is `qps`, including the first minute
+after start. This is an arrival rate, independent of whether replies have
+finished. Elapsed time advances by the greater positive step of the monotonic
+and wall clocks, so sleep expires old requests and a backward clock correction
+cannot revive them. No per-request history, timer or vendor query is needed.
+
+`Metrics` combines this rate with `Busy().Requests` and the concurrency
+lanes' waiting counts. Requests include those waiting for a slot; waiting
+is a subset and must not be added to requests. Tool waits stay separate
+from request counts. The existing concurrency endpoint also returns
+`qps` and `windowSeconds`. `TraceState.Metrics` carries the same
+snapshot through the local trace endpoint and `OwnerTrace`; omitted
+metrics mean unknown when reading an older gateway. The snapshot is read
+after a long poll returns, so an empty trace change list can still carry
+current load.
+
+A trace read with `wait=1` may bound that wait using `timeout` in
+milliseconds, up to the existing 25-second maximum. This bound passes
+through the GUI and `OwnerTrace` without adding a new endpoint. The
+Routing panel uses one second; existing callers retain 25 seconds. See
+[metrics.go](../../internal/gateway/metrics.go),
+[trace.go](../../internal/gateway/trace.go), and
+`metrics_test.go` for counting, expiry and trace snapshot verification.

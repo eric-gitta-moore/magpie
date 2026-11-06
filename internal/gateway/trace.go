@@ -673,6 +673,8 @@ type TraceState struct {
 	Seq    int64   `json:"seq"`
 	Routes []Route `json:"routes"`
 	Totals Totals  `json:"totals"`
+	// Metrics is sampled at read completion; nil means an older owner did not tell it.
+	Metrics *Metrics `json:"metrics,omitempty"`
 	// IDs are every route the trace keeps now, changed or not: a page that
 	// stopped reading while out of sight drops a request it last heard of
 	// under way that has since ended and gone from the trace
@@ -929,12 +931,9 @@ func (s *Server) gatewayTrace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
-	var wait time.Duration
-	if r.URL.Query().Get("wait") != "" {
-		wait = 25 * time.Second
-	}
+	wait := TracePollWait(r)
 	st := s.Trace(r.Context(), after, wait)
-	writeJSON(w, 200, map[string]any{"object": "trace", "now": time.Now(), "seq": st.Seq, "routes": st.Routes, "totals": st.Totals, "ids": st.IDs, "lifted": st.Lifted, "pid": os.Getpid(), "serves": Serves})
+	writeJSON(w, 200, map[string]any{"object": "trace", "now": time.Now(), "seq": st.Seq, "routes": st.Routes, "totals": st.Totals, "ids": st.IDs, "lifted": st.Lifted, "metrics": st.Metrics, "pid": os.Getpid(), "serves": Serves})
 }
 
 // ownerURL is the gateway's address on loopback, where the magpie serving
@@ -973,6 +972,7 @@ func OwnerTrace(ctx context.Context, after int64, wait time.Duration) (TraceStat
 	}
 	if wait > 0 {
 		q.Set("wait", "1")
+		q.Set("timeout", strconv.FormatInt(wait.Milliseconds(), 10))
 	}
 	// the serving magpie holds a long poll up to 25s; a hung one is let go
 	// a few seconds past that, and at once when the page stops asking
@@ -983,6 +983,11 @@ func OwnerTrace(ctx context.Context, after int64, wait time.Duration) (TraceStat
 	}
 	res, err := c.Do(req)
 	if err != nil {
+		// Older gateways ignore the shorter timeout and still hold a read for 25s.
+		// An immediate read keeps their trace available; cancellation never retries.
+		if ctx.Err() == nil && wait > 0 && wait < 25*time.Second {
+			return OwnerTrace(ctx, after, 0)
+		}
 		return TraceState{}, false
 	}
 	defer res.Body.Close()
@@ -994,19 +999,20 @@ func OwnerTrace(ctx context.Context, after int64, wait time.Duration) (TraceStat
 		return TraceState{}, false
 	}
 	var out struct {
-		Object string               `json:"object"`
-		Seq    int64                `json:"seq"`
-		Routes []Route              `json:"routes"`
-		Totals Totals               `json:"totals"`
-		IDs    []int64              `json:"ids"`
-		Lifted map[string]time.Time `json:"lifted"`
-		Pid    int                  `json:"pid"`
-		Serves string               `json:"serves"`
+		Object  string               `json:"object"`
+		Seq     int64                `json:"seq"`
+		Routes  []Route              `json:"routes"`
+		Totals  Totals               `json:"totals"`
+		Metrics *Metrics             `json:"metrics"`
+		IDs     []int64              `json:"ids"`
+		Lifted  map[string]time.Time `json:"lifted"`
+		Pid     int                  `json:"pid"`
+		Serves  string               `json:"serves"`
 	}
 	if decodeJSON(b, &out) != nil || out.Object != "trace" || out.Routes == nil {
 		return TraceState{}, false
 	}
-	return TraceState{Seq: out.Seq, Routes: out.Routes, Totals: out.Totals, IDs: out.IDs, Lifted: out.Lifted, By: &TraceBy{Pid: out.Pid, Serves: out.Serves}}, true
+	return TraceState{Seq: out.Seq, Routes: out.Routes, Totals: out.Totals, Metrics: out.Metrics, IDs: out.IDs, Lifted: out.Lifted, By: &TraceBy{Pid: out.Pid, Serves: out.Serves}}, true
 }
 
 // OwnerLanes reads the lanes of the magpie serving the gateway's address, for
@@ -1066,6 +1072,7 @@ func (s *Server) Trace(ctx context.Context, after int64, wait time.Duration) Tra
 		if len(st.Routes) > 0 || wait <= 0 || t.liftSeq > after {
 			t.mu.Unlock()
 			st.Lifted = liftedRests()
+			st.Metrics = s.Metrics(time.Now())
 			return st
 		}
 		if t.wake == nil {
@@ -1087,8 +1094,10 @@ func (s *Server) Trace(ctx context.Context, after int64, wait time.Duration) Tra
 			}
 		case <-deadline.C:
 			st.Lifted = liftedRests()
+			st.Metrics = s.Metrics(time.Now())
 			return st
 		case <-ctx.Done():
+			st.Metrics = s.Metrics(time.Now())
 			return st
 		}
 	}

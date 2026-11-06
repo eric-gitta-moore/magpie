@@ -61,6 +61,11 @@ type inflights struct {
 	mu  sync.Mutex
 	seq int64
 	m   map[int64]*inflight
+	// rateLast and rateWall advance the same window across sleep and clock corrections.
+	rateLast    time.Time
+	rateWall    time.Time
+	rateElapsed time.Duration
+	rateBuckets [metricsWindowSeconds]requestBucket
 }
 
 // add counts r in and answers it with its inflight on its context, and the
@@ -71,6 +76,14 @@ func (l *inflights) add(r *http.Request) (*http.Request, func()) {
 	if l.m == nil {
 		l.m = map[int64]*inflight{}
 	}
+	// Sample under the lock so concurrently arriving requests cannot rewind the clock.
+	now := time.Now()
+	second := l.rateSecondAt(now, now.Round(0))
+	bucket := &l.rateBuckets[second%metricsWindowSeconds]
+	if bucket.second != second {
+		*bucket = requestBucket{second: second}
+	}
+	bucket.requests++
 	l.seq++
 	f.id = l.seq
 	l.m[f.id] = f

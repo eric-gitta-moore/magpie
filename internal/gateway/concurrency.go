@@ -489,12 +489,9 @@ func (s *Server) concurrency(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	lanes := s.Lanes()
-	waiting := 0
-	for _, ln := range lanes {
-		waiting += ln.Waiting
-	}
+	metrics := s.Metrics(time.Now())
 	b := s.Busy()
-	writeJSON(w, 200, map[string]any{"object": "concurrency", "data": lanes, "requests": b.Requests, "waiting": waiting, "tools": b.Tools, "active": s.Active()})
+	writeJSON(w, 200, map[string]any{"object": "concurrency", "data": lanes, "requests": metrics.Requests, "waiting": metrics.Waiting, "tools": b.Tools, "active": s.Active(), "qps": metrics.QPS, "windowSeconds": metrics.WindowSeconds})
 }
 
 // Lanes is how each key or account with requests out or waiting stands,

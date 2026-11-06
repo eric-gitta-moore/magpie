@@ -1,3 +1,5 @@
+> Updated by OpenAI Codex (GPT-6).
+
 # GUI app shell
 
 The desktop app has a tray (menu bar) icon whose click drops a compact
@@ -1070,3 +1072,23 @@ still follows the existing Not set up folding rules. The dialog explains that
 restoring visibility does not pin an unconfigured agent into the main list.
 See `agent-bulk-visibility.test.cjs` for persistence, partial selection, failed
 saves, narrow layouts and all five languages in Chromium and WebKit.
+
+## Routing panel request load
+
+The tray panel's Routing tab shows the serving gateway's current in-flight
+requests, requests waiting for a concurrency slot, and average QPS below
+today's usage. These numbers come from the `metrics` snapshot carried by
+`/api/gateway/trace`, including when another Magpie on this computer
+serves the gateway. They do not depend on the six visible request rows or
+the trace's retained history. A missing snapshot, an older gateway or a
+failed read shows an em dash, then recovers on the next successful read.
+
+While the Routing panel is visible, its existing trace read waits at most
+one second so QPS falls as its window expires even without route changes.
+Metrics-only replies update this line's text without rebuilding the
+request list or its animation stage. Hidden panels stop reading through
+the existing visibility path and refresh when shown again. The window's
+ordinary trace long poll keeps its existing wait. See
+[request-load counting](gateway-routing.md#request-load-counting),
+[the panel](../../internal/gui/assets/plugins/routing/client.js), and
+`panel-routing-load.test.cjs` for the five-language Chromium/WebKit checks.

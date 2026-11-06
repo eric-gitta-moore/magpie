@@ -77,7 +77,13 @@ func recalledTitleHistory(day string) []gateway.Route {
 	return titleHistory.days[day] // immutable after publication
 }
 
+// pricedRoutes enriches retained routes with their display titles and pricing.
+// Empty metric samples preserve an empty JSON list without reading those sources.
 func pricedRoutes(routes []gateway.Route) []routeJSON {
+	// Metrics-only polls have no routes to price or enrich. Keep the JSON list empty.
+	if len(routes) == 0 {
+		return []routeJSON{}
+	}
 	gw := served.Load()
 	if gw == nil {
 		gw = &gateway.Server{}
@@ -512,10 +518,7 @@ func traceRoutes(mux *http.ServeMux) {
 		gw := served.Load()
 		out := traceJSON{TraceState: gateway.TraceState{Routes: []gateway.Route{}}, Mine: gw != nil}
 		after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
-		var wait time.Duration
-		if r.URL.Query().Get("wait") != "" {
-			wait = 25 * time.Second
-		}
+		wait := gateway.TracePollWait(r)
 		if gw != nil {
 			out.TraceState = gw.Trace(r.Context(), after, wait)
 		} else if st, ok := gateway.OwnerTrace(r.Context(), after, wait); ok {
